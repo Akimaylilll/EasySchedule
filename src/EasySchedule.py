@@ -29,7 +29,7 @@ class EasySchedule:
     #peewee
     def init_peewee(self):
         # yaml
-        assert os.path.isfile(self.CONFIG_FILE_PATH), "config.yml no found"
+        assert os.path.isfile(self.CONFIG_FILE_PATH), "'CONFIG_FILE_PATH' file does not exist"
         try:
             config_file = open(self.CONFIG_FILE_PATH, 'r', encoding="utf-8")
             config_data = config_file.read()
@@ -57,7 +57,7 @@ class EasySchedule:
 
     #schedule
     def init_schedule(self):
-        assert os.path.isdir(self.SCHEDULE_PATH), "dir schedules no found"
+        assert os.path.isdir(self.SCHEDULE_PATH), "'SCHEDULE_PATH' folder does not exist"
         modules = self.get_all_modules(self.SCHEDULE_PATH)
         for module in modules:
             members = inspect.getmembers(module, inspect.isclass)
