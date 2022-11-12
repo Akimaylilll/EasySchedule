@@ -8,7 +8,7 @@ setup(name = 'EasySchedule',
       long_description = '',
       author = 'maylill',
       author_email = '642722474@qq.com',
-      url = '',
+      url = 'https://github.com/May-Zhang/EasySchedule',
       license = 'MIT',
       install_requires = [
         'peewee',
