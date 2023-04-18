@@ -6,25 +6,48 @@ import yaml
 import peewee as pw
 import schedule
 import time
+import sys
+sys.path.append(os.path.join(os.path.dirname(__file__), '../../'))
 
 database_porxy = pw.Proxy()
 class EasySchedule:
     peewee = pw
     schedule = schedule
     CONFIG_FILE_PATH = 'config.yml'
-    SCHEDULE_PATH = 'schedules'
+    SCHEDULES_PATH = 'schedules'
+    MODELS_PATH = 'models'
     database = database_porxy
 
-    def __init__(self):
+    def __init__(self, config_path, schedules_path, models_path):
+        self.CONFIG_FILE_PATH = config_path
+        self.SCHEDULES_PATH = schedules_path
+        self.MODELS_PATH = models_path
         self.init_peewee()
         self.init_schedule()
+        self.init_terminal()
         pass
 
     # run_pending of schedule
     def run_pending(self):
+        print("EasySchedule Framework is run_pending...")
         while True:
             schedule.run_pending() # 运行所有可运行的任务
             time.sleep(1)
+
+    #init_terminal
+    def init_terminal(self):
+        print(
+            """
+                            
+                   ____                ____    __          __     __   
+                  / __/__ ____ __ __  / __/___/ /  ___ ___/ /_ __/ /__ 
+                 / _// _ `(_-</ // / _\ \/ __/ _ \/ -_) _  / // / / -_)
+                /___/\_,_/___/\_, / /___/\__/_//_/\__/\_,_/\_,_/_/\__/ 
+                             /___/ 
+                
+            """
+        )
+        pass
 
     #peewee
     def init_peewee(self):
@@ -54,20 +77,36 @@ class EasySchedule:
         except Exception as e:
             assert not e
         pass
+        
+        assert os.path.isdir(self.MODELS_PATH), "'MODELS_PATH' folder does not exist"
+        modules = self.get_all_modules(self.MODELS_PATH)
+        bindModels = []
+        for module in modules:
+            members = inspect.getmembers(module["model"], inspect.isclass)
+            for(name, class_) in members:
+                if(name == module["file"]):
+                    bindModels.append(class_)
+        self.database.bind(bindModels)
+        self.database.connect()
+        self.database.create_tables(bindModels)
+        self.database.close()
 
     #schedule
     def init_schedule(self):
-        assert os.path.isdir(self.SCHEDULE_PATH), "'SCHEDULE_PATH' folder does not exist"
-        modules = self.get_all_modules(self.SCHEDULE_PATH)
+        assert os.path.isdir(self.SCHEDULES_PATH), "'SCHEDULES_PATH' folder does not exist"
+        modules = self.get_all_modules(self.SCHEDULES_PATH)
         for module in modules:
             members = inspect.getmembers(module, inspect.isclass)
             for(name, class_) in members:
                 if(str(class_).find('schedules') != -1):
-                    if(hasattr(class_,'cron') and class_.cron):
-                        trigger = self.schedule_trigger(class_.cron)
-                        trigger.do(class_)
-                    else:
-                        class_()
+                    try:
+                        if(hasattr(class_,'cron') and class_.cron):
+                            trigger = self.schedule_trigger(class_.cron)
+                            trigger.do(class_)
+                        else:
+                            class_()
+                    except Exception as e:
+                        print(name, e)
         pass
 
     def get_all_modules(self, dir):
@@ -83,7 +122,7 @@ class EasySchedule:
                     if module_path[0] == '.' and module_path[1] != '.':
                         module_path = module_path[1:]
                     module = importlib.import_module(module_path)
-                    all_modules.append(module)
+                    all_modules.append({"model": module, "file": os.path.splitext(file)[0]})
         return all_modules
 
     def schedule_trigger(self, cron):

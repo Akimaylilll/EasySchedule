@@ -1,7 +1,6 @@
 import peewee as pw
 from datetime import datetime
-from EasySchedule import BaseModel
-class Goods(BaseModel):
+class Goods(pw.Model):
     shop_id = pw.IntegerField(verbose_name="店铺id")
     shop_name = pw.CharField(verbose_name="店铺名称")
     shop_address = pw.CharField(verbose_name="店铺地址")
@@ -9,4 +8,4 @@ class Goods(BaseModel):
     created_time = pw.DateTimeField(default = datetime.now,verbose_name="创建时间")
 
     class Meta:
-        db_table = 'tb_goods'  # 数据库的表名
+        db_table = 'goods'

@@ -1,2 +1,5 @@
 **/__pycache__
 **/EasySchedule.egg-info
+
+config.yml
+dist/
