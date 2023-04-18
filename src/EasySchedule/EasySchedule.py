@@ -23,8 +23,8 @@ class EasySchedule:
         self.SCHEDULES_PATH = schedules_path
         self.MODELS_PATH = models_path
         self.init_peewee()
-        self.init_schedule()
         self.init_terminal()
+        self.init_schedule()
         pass
 
     # run_pending of schedule
@@ -96,7 +96,7 @@ class EasySchedule:
         assert os.path.isdir(self.SCHEDULES_PATH), "'SCHEDULES_PATH' folder does not exist"
         modules = self.get_all_modules(self.SCHEDULES_PATH)
         for module in modules:
-            members = inspect.getmembers(module, inspect.isclass)
+            members = inspect.getmembers(module["model"], inspect.isclass)
             for(name, class_) in members:
                 if(str(class_).find('schedules') != -1):
                     try:
