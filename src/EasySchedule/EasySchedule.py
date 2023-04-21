@@ -7,12 +7,33 @@ import peewee as pw
 import schedule
 import time
 import sys
+import functools
+import logging
 sys.path.append(os.path.join(os.path.dirname(__file__), '../../'))
 
+def catch_exceptions_decorator(job_func):
+    @functools.wraps(job_func)
+    def wrapper(*args, **kwargs):
+        try:
+            return job_func(*args, **kwargs)
+        except Exception as e:
+            import traceback
+            print(traceback.format_exc())
+    return wrapper
+
+logger = logging.getLogger(__name__)
+logger.setLevel(level = logging.INFO)
+handler = logging.FileHandler("log.txt")
+handler.setLevel(logging.INFO)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+logger.info("Do something")
 database_porxy = pw.Proxy()
 class EasySchedule:
     peewee = pw
     schedule = schedule
+    logger = logger
     CONFIG_FILE_PATH = 'config.yml'
     SCHEDULES_PATH = 'schedules'
     MODELS_PATH = 'models'
@@ -25,6 +46,20 @@ class EasySchedule:
         self.init_peewee()
         self.init_terminal()
         self.init_schedule()
+        pass
+
+    def exec_do(self, class_):
+        if(hasattr(class_,'cron') and class_.cron):
+            trigger = self.schedule_trigger(class_.cron)
+            newFunc = catch_exceptions_decorator(class_().trigger)
+            trigger.do(newFunc)
+        else:
+            c = class_()
+            try:
+                c.trigger()
+            except Exception as e:
+                import traceback
+                print(traceback.format_exc())
         pass
 
     # run_pending of schedule
@@ -99,14 +134,7 @@ class EasySchedule:
             members = inspect.getmembers(module["model"], inspect.isclass)
             for(name, class_) in members:
                 if(str(class_).find('schedules') != -1):
-                    try:
-                        if(hasattr(class_,'cron') and class_.cron):
-                            trigger = self.schedule_trigger(class_.cron)
-                            trigger.do(class_)
-                        else:
-                            class_()
-                    except Exception as e:
-                        print(name, e)
+                    self.exec_do(class_)
         pass
 
     def get_all_modules(self, dir):
@@ -150,6 +178,6 @@ class EasySchedule:
             trigger = trigger.at(mark)
         return trigger
 
-class BaseModel(pw.Model):
-    class Meta:
-        database = database_porxy
+# class BaseModel(pw.Model):
+#     class Meta:
+#         database = database_porxy
