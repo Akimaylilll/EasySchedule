@@ -9,6 +9,7 @@ import time
 import sys
 import functools
 import logging
+import requests
 sys.path.append(os.path.join(os.path.dirname(__file__), '../../'))
 
 def catch_exceptions_decorator(job_func, logger):
@@ -38,13 +39,15 @@ class EasySchedule:
         self.MODELS_PATH = models_path
         self.LOG_PATH = log_path
         self.class_list = []
-        self.logger = self.logger()
-        self.init_peewee()
+        config = self.read_config()
+        self.logger = self.init_logger()
+        self.send_message = self.init_message(config)
+        self.init_peewee(config)
         self.init_terminal()
         self.init_schedule()
         pass
 
-    def logger(self):
+    def init_logger(self):
         logger = logging.getLogger(__name__)
         logger.setLevel(level = logging.INFO)
         if not logger.handlers:
@@ -60,11 +63,21 @@ class EasySchedule:
             logger.addHandler(sh)
         return logger
 
+    def init_message(self, config):
+        def send_message(self, message):
+            if not config['message_api']:
+                return None
+            message_api = config['message_api']
+            # print(message_api, message)
+            return requests.get(url = message_api, params = {"message": message})
+        return send_message
+
     def exec_do(self, name, class_):
         if(hasattr(class_,'cron') and class_.cron):
             # print(name)
             trigger = self.schedule_trigger(class_.cron)
             class_.logger = self.logger
+            class_.send_message = self.send_message
             c = class_()
             newFunc = catch_exceptions_decorator(c.trigger, self.logger)
             trigger.do(newFunc)
@@ -75,6 +88,7 @@ class EasySchedule:
     def run_no_cron_class_list(self, class_list):
         for class_ in class_list:
             class_.logger = self.logger
+            class_.send_message = self.send_message
             c = class_()
             try:
                 c.trigger()
@@ -106,8 +120,7 @@ class EasySchedule:
         )
         pass
 
-    #peewee
-    def init_peewee(self):
+    def read_config(self):
         # yaml
         assert os.path.isfile(self.CONFIG_FILE_PATH), "'CONFIG_FILE_PATH' file does not exist"
         try:
@@ -117,7 +130,10 @@ class EasySchedule:
         except Exception as e:
             assert not e
         config = yaml.safe_load(config_data)
+        return config
 
+    #peewee
+    def init_peewee(self, config):
         #mysql config
         mysql_config = config['mysql']
         self.database = pw.MySQLDatabase(\
