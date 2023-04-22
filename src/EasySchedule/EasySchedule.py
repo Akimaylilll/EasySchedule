@@ -54,6 +54,7 @@ class EasySchedule:
         self.SCHEDULES_PATH = schedules_path
         self.MODELS_PATH = models_path
         self.LOG_PATH = log_path
+        self.class_list = []
         global LOG_PATH
         LOG_PATH = self.LOG_PATH
         self.logger = logger()
@@ -71,6 +72,11 @@ class EasySchedule:
             newFunc = catch_exceptions_decorator(c.trigger, self.logger)
             trigger.do(newFunc)
         else:
+            self.class_list.append(class_)
+        pass
+
+    def run_no_cron_class_list(self, class_list):
+        for class_ in class_list:
             class_.logger = self.logger
             c = class_()
             try:
@@ -83,6 +89,7 @@ class EasySchedule:
     # run_pending of schedule
     def run_pending(self):
         self.logger.info("EasySchedule Framework is run_pending...")
+        self.run_no_cron_class_list(self.class_list)
         while True:
             schedule.run_pending() # 运行所有可运行的任务
             time.sleep(1)
