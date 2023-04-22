@@ -11,7 +11,6 @@ import functools
 import logging
 sys.path.append(os.path.join(os.path.dirname(__file__), '../../'))
 
-LOG_PATH = "test.log"
 def catch_exceptions_decorator(job_func, logger):
     @functools.wraps(job_func)
     def wrapper(*args, **kwargs):
@@ -21,22 +20,6 @@ def catch_exceptions_decorator(job_func, logger):
             import traceback
             logger.error(traceback.format_exc())
     return wrapper
-
-def logger():
-    logger = logging.getLogger(__name__)
-    logger.setLevel(level = logging.INFO)
-    if not logger.handlers:
-        sh = logging.StreamHandler()
-        sh.setLevel(logging.DEBUG)
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        sh.setFormatter(formatter)
-        handler = logging.FileHandler(LOG_PATH)
-        handler.setLevel(logging.INFO)
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        handler.setFormatter(formatter)
-        logger.addHandler(handler)
-        logger.addHandler(sh)
-    return logger
 
 database_porxy = pw.Proxy()
 class EasySchedule:
@@ -55,13 +38,27 @@ class EasySchedule:
         self.MODELS_PATH = models_path
         self.LOG_PATH = log_path
         self.class_list = []
-        global LOG_PATH
-        LOG_PATH = self.LOG_PATH
-        self.logger = logger()
+        self.logger = self.logger()
         self.init_peewee()
         self.init_terminal()
         self.init_schedule()
         pass
+
+    def logger(self):
+        logger = logging.getLogger(__name__)
+        logger.setLevel(level = logging.INFO)
+        if not logger.handlers:
+            sh = logging.StreamHandler()
+            sh.setLevel(logging.DEBUG)
+            formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+            sh.setFormatter(formatter)
+            handler = logging.FileHandler(self.LOG_PATH)
+            handler.setLevel(logging.INFO)
+            formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+            handler.setFormatter(formatter)
+            logger.addHandler(handler)
+            logger.addHandler(sh)
+        return logger
 
     def exec_do(self, name, class_):
         if(hasattr(class_,'cron') and class_.cron):
