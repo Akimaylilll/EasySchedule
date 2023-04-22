@@ -23,7 +23,6 @@ def catch_exceptions_decorator(job_func, logger):
     return wrapper
 
 def logger():
-    logger = None
     logger = logging.getLogger(__name__)
     logger.setLevel(level = logging.INFO)
     if not logger.handlers:
