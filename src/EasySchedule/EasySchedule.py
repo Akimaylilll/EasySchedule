@@ -12,12 +12,17 @@ import logging
 import requests
 sys.path.append(os.path.join(os.path.dirname(__file__), '../../'))
 
-def catch_exceptions_decorator(job_func, logger):
+def catch_exceptions_decorator(job_func, logger, database):
     @functools.wraps(job_func)
     def wrapper(*args, **kwargs):
         try:
             return job_func(*args, **kwargs)
         except Exception as e:
+            try:
+                database.close()
+                logger.info('database is closed')
+            except :
+                logger.info('database is closed')
             import traceback
             logger.error(traceback.format_exc())
     return wrapper
@@ -79,8 +84,16 @@ class EasySchedule:
             class_.logger = self.logger
             class_.send_message = self.send_message
             c = class_()
-            newFunc = catch_exceptions_decorator(c.trigger, self.logger)
-            trigger.do(newFunc)
+            newFunc = catch_exceptions_decorator(c.trigger, self.logger, self.database)
+            def function_db():
+                try:
+                    self.database.connect()
+                except:
+                    self.database.close()
+                    self.database.connect()
+                newFunc()
+                self.database.close()
+            trigger.do(function_db)
         else:
             self.class_list.append(class_)
         pass
