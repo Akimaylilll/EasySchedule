@@ -70,11 +70,14 @@ class EasySchedule:
 
     def init_message(self, config):
         def send_message(self, message):
-            if not config['message_api']:
+            if not config['message']:
                 return None
-            message_api = config['message_api']
-            # print(message_api, message)
-            return requests.get(url = message_api, params = {"message": message})
+            message_api = config['message']['url']
+            params = config['message']['params']
+            params["message"] = message
+            if config['message']['type'] == 'http':
+                return requests.get(url = message_api, params = params)
+            return
         return send_message
 
     def exec_do(self, name, class_):
