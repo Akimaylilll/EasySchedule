@@ -10,6 +10,7 @@ import sys
 import functools
 import logging
 import requests
+from multiprocessing_on_dill.dummy import Pool
 sys.path.append(os.path.join(os.path.dirname(__file__), '../../'))
 
 def catch_exceptions_decorator(job_func, logger, database):
@@ -38,7 +39,7 @@ class EasySchedule:
     logger = None
     database = database_porxy
 
-    def __init__(self, config_path, schedules_path, models_path, log_path):
+    def __init__(self, config_path = 'config.yml', schedules_path = 'schedules', models_path = 'models', log_path = 'run.log'):
         self.CONFIG_FILE_PATH = config_path
         self.SCHEDULES_PATH = schedules_path
         self.MODELS_PATH = models_path
@@ -50,6 +51,7 @@ class EasySchedule:
         self.init_peewee(config)
         self.init_terminal()
         self.init_schedule()
+        self.pool = Pool()
         pass
 
     def init_logger(self):
@@ -79,7 +81,16 @@ class EasySchedule:
                 return requests.get(url = message_api, params = params)
             return
         return send_message
-
+    def function_db(self, newFunc):
+        try:
+            self.database.connect()
+        except:
+            self.database.close()
+            self.database.connect()
+        newFunc()
+        self.database.close()
+    def process_function(self, newFunc):
+        self.pool.apply(self.function_db, args=(newFunc,))
     def exec_do(self, name, class_):
         if(hasattr(class_,'cron') and class_.cron):
             # print(name)
@@ -88,15 +99,7 @@ class EasySchedule:
             class_.send_message = self.send_message
             c = class_()
             newFunc = catch_exceptions_decorator(c.trigger, self.logger, self.database)
-            def function_db():
-                try:
-                    self.database.connect()
-                except:
-                    self.database.close()
-                    self.database.connect()
-                newFunc()
-                self.database.close()
-            trigger.do(function_db)
+            trigger.do(self.process_function, newFunc)
         else:
             self.class_list.append(class_)
         pass
