@@ -39,11 +39,12 @@ class EasySchedule:
     logger = None
     database = database_porxy
 
-    def __init__(self, config_path = 'config.yml', schedules_path = 'schedules', models_path = 'models', log_path = 'run.log'):
+    def __init__(self, config_path = 'config.yml', schedules_path = 'schedules', models_path = 'models', log_path = 'run.log', multiprocessing = False):
         self.CONFIG_FILE_PATH = config_path
         self.SCHEDULES_PATH = schedules_path
         self.MODELS_PATH = models_path
         self.LOG_PATH = log_path
+        self.MULTIPROCESSING = multiprocessing
         self.class_list = []
         config = self.read_config()
         self.logger = self.init_logger()
@@ -90,7 +91,7 @@ class EasySchedule:
         newFunc()
         self.database.close()
     def process_function(self, newFunc):
-        self.pool.apply(self.function_db, args=(newFunc,))
+        self.pool.apply_async(self.function_db, args=(newFunc,))
     def exec_do(self, name, class_):
         if(hasattr(class_,'cron') and class_.cron):
             # print(name)
@@ -99,7 +100,10 @@ class EasySchedule:
             class_.send_message = self.send_message
             c = class_()
             newFunc = catch_exceptions_decorator(c.trigger, self.logger, self.database)
-            trigger.do(self.process_function, newFunc)
+            if self.MULTIPROCESSING:
+                trigger.do(self.process_function, newFunc)
+            else:
+                trigger.do(newFunc)
         else:
             self.class_list.append(class_)
         pass
@@ -110,7 +114,10 @@ class EasySchedule:
             class_.send_message = self.send_message
             c = class_()
             try:
-                c.trigger()
+                if self.MULTIPROCESSING:
+                    self.pool.apply_async(c.trigger)
+                else:
+                    c.trigger()
             except Exception as e:
                 import traceback
                 class_.logger.error(traceback.format_exc())
